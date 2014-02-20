@@ -32,6 +32,11 @@ class EEN {
 		$author 		= get_userdata($postAuthorID);
 		$postTitle 		= $_POST['post_title'];	
 		$emailSubject 	= "[" . get_bloginfo('name', 'display') . "] Pending Post Notification";
+		
+		// If post type is 'revision' then leave alone as 'Revisionary' plugin dealing with notifications.
+		if(isset($_POST['save']) && ($_POST['save'] == "Submit Revision")) {
+			return false;
+		}
 	
 		if($postAuthorID == get_current_user_id()) {
 			// A contributor has submitted a post for approval.
@@ -59,17 +64,28 @@ class EEN {
 	 *
 	 */
 	public function published_post() {
-		$postID 		= $_POST['post_ID'];
-		$postAuthorID 	= $_POST['post_author'];
-		$author 		= get_userdata($postAuthorID);
-		$postTitle 		= $_POST['post_title'];
-	
-		if($postAuthorID != get_current_user_id()) {
-			// Author's post has been published by someone else. Update the author of the published event.
-			$subject = "[" . get_bloginfo('name', 'display') . "] Published Post Notification";
-			$message = "A pending post of yours, \"" . $postTitle . "\", has been reviewed and published.\n\n";
-			$message .= "View the published post at " . get_permalink($postID);
-			wp_mail($author->user_email, $subject, $message);
+		if(isset($_POST) && (count($_POST)>0)) {
+			$postID 		= $_POST['post_ID'];
+			$postAuthorID 	= $_POST['post_author'];
+			$author 		= get_userdata($postAuthorID);
+			$postTitle 		= $_POST['post_title'];
+			$currentState 	= $_POST['original_post_status'];
+			
+			if($currentState == "publish") {
+				// Post already published, and been updated live.
+				if($postAuthorID != get_current_user_id()) {
+					$subject = "[" . get_bloginfo('name', 'display') . "] Published Post Notification";
+					$message = "A published post of yours, \"" . $postTitle . "\", has been updated.\n\n";
+					$message .= "View the published post at " . get_permalink($postID);
+					wp_mail($author->user_email, $subject, $message);
+				}
+			} else if($postAuthorID != get_current_user_id()) {
+				// Author's post has been published by someone else. Update the author of the published event.
+				$subject = "[" . get_bloginfo('name', 'display') . "] Published Post Notification";
+				$message = "A pending post of yours, \"" . $postTitle . "\", has been reviewed and published.\n\n";
+				$message .= "View the published post at " . get_permalink($postID);
+				wp_mail($author->user_email, $subject, $message);
+			}
 		}
 	}
 }
